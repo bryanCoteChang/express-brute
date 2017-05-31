@@ -29,7 +29,11 @@ var ExpressBrute = module.exports = function (store, options) {
 	}
 
 	// generate "prevent" middleware
-	this.prevent = this.getMiddleware();
+	this.prevent = this.getMiddleware({
+      key: function(req, res, next) {
+        next(req.body.email);
+      }
+    });
 };
 ExpressBrute.prototype.getMiddleware = function (options) {
 	// standardize input
@@ -41,16 +45,14 @@ ExpressBrute.prototype.getMiddleware = function (options) {
 	var getFailCallback = _.bind(function () {
 		return typeof options.failCallback === 'undefined' ? this.options.failCallback : options.failCallback;
 	}, this);
-
 	// create middleware
 	return _.bind(function (req, res, next) {
 		keyFunc(req, res, _.bind(function (key) {
 			if(!options.ignoreIP) {
-				key = ExpressBrute._getKey([req.ip, this.name, key]);
+				key = ExpressBrute._getKey([req.body.ip, this.name, key]);
 			} else {
 				key = ExpressBrute._getKey([this.name, key]);
 			}
-
 			// attach a simpler "reset" function to req.brute.reset
 			if (this.options.attachResetToRequest) {
 				var reset = _.bind(function (callback) {
@@ -76,7 +78,6 @@ ExpressBrute.prototype.getMiddleware = function (options) {
 					reset: reset
 				};
 			}
-
 
 			// filter request
 			this.store.get(key, _.bind(function (err, value) {
@@ -112,6 +113,8 @@ ExpressBrute.prototype.getMiddleware = function (options) {
 				var nextValidRequestTime = lastValidRequestTime+delay,
 					remainingLifetime = this.options.lifetime || 0;
 
+				var currDelay = delay;
+
 				if (!this.options.refreshTimeoutOnRequest && remainingLifetime > 0) {
 					remainingLifetime = remainingLifetime - Math.floor((this.now() - firstRequestTime) / 1000);
 					if (remainingLifetime < 1) {
@@ -143,7 +146,7 @@ ExpressBrute.prototype.getMiddleware = function (options) {
 					},this));
 				} else {
 					var failCallback = getFailCallback();
-					typeof failCallback === 'function' && failCallback(req, res, next, new Date(nextValidRequestTime));
+					typeof failCallback === 'function' && failCallback(req, res, next, new Date(nextValidRequestTime), currDelay);
 				}
 			}, this));
 		},this));
