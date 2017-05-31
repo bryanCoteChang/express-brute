@@ -29,11 +29,7 @@ var ExpressBrute = module.exports = function (store, options) {
 	}
 
 	// generate "prevent" middleware
-	this.prevent = this.getMiddleware({
-      key: function(req, res, next) {
-        next(req.body.email);
-      }
-    });
+	this.prevent = this.getMiddleware();
 };
 ExpressBrute.prototype.getMiddleware = function (options) {
 	// standardize input
